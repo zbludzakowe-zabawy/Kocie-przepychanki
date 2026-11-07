@@ -54,6 +54,7 @@
   </header>
 
   <p id="status" class="status" role="status" aria-live="polite"></p>
+  <p class="choice"><button id="btn-lines" type="button" hidden>Zamień pionki z rzędu w koty</button></p>
 
   <main class="layout">
     <section class="player" id="player-0" data-player="0">
@@ -101,8 +102,8 @@
       <li><b>Mysz</b> odpycha o jedno pole wszystkie sąsiednie myszy (8 pól dookoła). Kotów nie rusza.</li>
       <li><b>Kot</b> odpycha o jedno pole wszystkie sąsiednie pionki — koty i myszy.</li>
       <li>Pionek nie przesunie się, jeśli pole za nim jest zajęte. Pionek wypchnięty poza planszę wraca do zasobnika właściciela.</li>
-      <li>Trzy pionki jednego gracza w rzędzie (poziomo, pionowo lub po skosie, myszy i koty dowolnie pomieszane) zamieniają się w koty: schodzą z planszy, a do zasobnika trafiają koty.</li>
-      <li>Gdy gracz ma wszystkie 8 pionków na planszy, wybiera jedną swoją mysz, która zamienia się w kota (schodzi do zasobnika).</li>
+      <li>Trzy pionki jednego gracza w rzędzie (poziomo, pionowo lub po skosie, myszy i koty dowolnie pomieszane) zamieniają się w koty: schodzą z planszy, a do zasobnika trafiają koty. Zamiana następuje tylko po ruchu gracza, do którego należą pionki w rzędzie. Rząd ułożony ruchem przeciwnika (przez przepchnięcie) się nie zamienia — czeka na ruch właściciela.</li>
+      <li>Gdy gracz ma wszystkie 8 pionków na planszy, wybiera jedną swoją mysz, która zamienia się w kota (schodzi do zasobnika). Jeśli jednocześnie ma trzy pionki w rzędzie, wybiera: zamienia jeden wskazany pionek albo pionki z rzędu.</li>
       <li><b>Wygrywa</b> ten, kto ustawi w rzędzie trzy swoje koty.</li>
     </ul>
     <form method="dialog"><button>Grajmy!</button></form>

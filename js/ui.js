@@ -9,6 +9,7 @@
   const boardEl = document.getElementById('board');
   const statusEl = document.getElementById('status');
   const undoBtn = document.getElementById('btn-undo');
+  const linesBtn = document.getElementById('btn-lines');
   const panels = [document.getElementById('player-0'), document.getElementById('player-1')];
 
   let state = L.createGame();
@@ -121,6 +122,8 @@
     const p = state.current;
     if (state.phase === 'over') {
       statusEl.innerHTML = `${dot(state.winner)}Wygrywa gracz ${NAMES[state.winner]}! Trzy koty w rzędzie! 🎉`;
+    } else if (state.phase === 'choose' && L.choosableLineCells(state).length) {
+      statusEl.innerHTML = `${dot(p)}Gracz ${NAMES[p]} ma wszystkie pionki na planszy i pionki w rzędzie — wskaż jeden pionek albo zamień pionki z rzędu.`;
     } else if (state.phase === 'choose') {
       statusEl.innerHTML = `${dot(p)}Gracz ${NAMES[p]} ma wszystkie pionki na planszy — wybierz mysz, która zmieni się w kota.`;
     } else {
@@ -131,11 +134,12 @@
 
   function updateHints() {
     for (const cell of cells) {
-      cell.classList.remove('hover-ok', 'hover-bad', 'will-push', 'will-fall', 'choosable');
+      cell.classList.remove('hover-ok', 'hover-bad', 'will-push', 'will-fall', 'choosable', 'in-line');
     }
     if (animating) return;
     if (state.phase === 'choose') {
       for (const [r, c] of L.choosableCells(state)) cellAt(r, c).classList.add('choosable');
+      for (const [r, c] of L.choosableLineCells(state)) cellAt(r, c).classList.add('in-line');
       return;
     }
     if (state.phase !== 'place' || !hoverCell) return;
@@ -158,6 +162,11 @@
     renderStatus();
     updateHints();
     undoBtn.disabled = history.length === 0 || animating;
+    renderLinesBtn();
+  }
+
+  function renderLinesBtn() {
+    linesBtn.hidden = animating || L.choosableLineCells(state).length === 0;
   }
 
   // ---------- animacja ruchu ----------
@@ -202,6 +211,7 @@
     renderPanels();
     renderStatus();
     undoBtn.disabled = true;
+    linesBtn.hidden = true;
     await animate(events);
     render();
   }
@@ -226,6 +236,11 @@
         updateHints();
       });
     }
+  });
+
+  linesBtn.addEventListener('click', () => {
+    if (animating) return;
+    apply(L.chooseLines(state));
   });
 
   undoBtn.addEventListener('click', () => {

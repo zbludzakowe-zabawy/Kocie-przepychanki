@@ -165,28 +165,56 @@
       }
     }
 
-    // 4. Trzy pionki gracza w rzędzie — zamieniają się w koty (wracają do zasobnika).
-    for (const owner of [player, 1 - player]) {
-      const lines = findLines(s.board, owner);
-      const cells = new Map();
-      for (const line of lines) {
-        for (const [a, b] of line) cells.set(a * SIZE + b, [a, b]);
-      }
-      for (const [a, b] of cells.values()) {
-        const p = s.board[a][b];
-        s.board[a][b] = null;
-        s.pools[owner].cat++;
-        events.promoted.push({ id: p.id, owner, at: [a, b] });
-      }
-    }
-
-    // 5. Wszystkie 8 pionków na planszy — gracz wybiera mysz, która zostanie kotem.
+    // 4. Wszystkie 8 pionków na planszy — gracz wybiera mysz, która zostanie kotem.
+    //    Jeśli jednocześnie ma rząd, wybiera: jeden pionek albo pionki z rzędu.
     if (poolTotal(s.pools[player]) === 0) {
       s.phase = 'choose';
       return { state: s, events };
     }
 
+    // 5. Trzy pionki w rzędzie zamieniają się w koty tylko po ruchu ich właściciela.
+    //    Rzędy przeciwnika (np. powstałe przez przepchnięcie) zostają na planszy.
+    promoteLines(s, player, events);
+
     s.current = 1 - player;
+    return { state: s, events };
+  }
+
+  /** Zdejmuje z planszy wszystkie pionki z rzędów gracza `owner` i daje mu tyle kotów. */
+  function promoteLines(s, owner, events) {
+    const cells = new Map();
+    for (const line of findLines(s.board, owner)) {
+      for (const [a, b] of line) cells.set(a * SIZE + b, [a, b]);
+    }
+    for (const [a, b] of cells.values()) {
+      const p = s.board[a][b];
+      s.board[a][b] = null;
+      s.pools[owner].cat++;
+      events.promoted.push({ id: p.id, owner, at: [a, b] });
+    }
+  }
+
+  /** Pola rzędów bieżącego gracza, które w fazie 'choose' może zamienić zamiast jednego pionka. */
+  function choosableLineCells(state) {
+    if (state.phase !== 'choose') return [];
+    const cells = new Map();
+    for (const line of findLines(state.board, state.current)) {
+      for (const [a, b] of line) cells.set(a * SIZE + b, [a, b]);
+    }
+    return [...cells.values()];
+  }
+
+  /**
+   * Faza 'choose', gdy gracz ma też rząd: zamiast jednego pionka zamieniają się
+   * w koty pionki z rzędu. Zwraca { state, events } albo null.
+   */
+  function chooseLines(state) {
+    if (!choosableLineCells(state).length) return null;
+    const s = cloneState(state);
+    const events = { placed: null, pushes: [], promoted: [] };
+    promoteLines(s, s.current, events);
+    s.phase = 'place';
+    s.current = 1 - s.current;
     return { state: s, events };
   }
 
@@ -236,6 +264,8 @@
     placePiece,
     choosableCells,
     choosePiece,
+    choosableLineCells,
+    chooseLines,
     findLines,
     poolTotal,
   };
