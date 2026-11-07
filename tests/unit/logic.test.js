@@ -1,7 +1,6 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const L = require('../js/logic.js');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../../src/logic.js';
 
 /** Pomocnik: ustawia pionek bezpośrednio na planszy (z pominięciem zasobnika). */
 function put(state, r, c, owner, type) {
@@ -194,4 +193,23 @@ test('liczba pionków każdego gracza zawsze wynosi 8 (losowe partie)', () => {
       assert.equal(count(s, 1), 8);
     }
   }
+});
+
+test('isValidState: przyjmuje stany z gry, odrzuca uszkodzone', () => {
+  let s = L.createGame();
+  assert.equal(L.isValidState(s), true);
+  s = L.placePiece(s, 2, 2, L.MOUSE).state;
+  assert.equal(L.isValidState(JSON.parse(JSON.stringify(s))), true);
+  assert.equal(L.isValidState(null), false);
+  assert.equal(L.isValidState({}), false);
+  const broken = L.cloneState(s);
+  broken.pools[0].mouse = 8; // 9 pionków
+  assert.equal(L.isValidState(broken), false);
+  const badPhase = L.cloneState(s);
+  badPhase.phase = 'cokolwiek';
+  assert.equal(L.isValidState(badPhase), false);
+  const dupId = L.cloneState(s);
+  dupId.board[0][0] = { ...dupId.board[2][2] };
+  dupId.pools[0].mouse--;
+  assert.equal(L.isValidState(dupId), false);
 });

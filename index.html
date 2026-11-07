@@ -2,9 +2,18 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3a78c9">
   <title>Kocie przepychanki</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="description" content="Gra dla dwóch osób: myszy i koty przepychają się na pikowanej planszy 6×6.">
+  <meta name="application-name" content="Kocie przepychanki">
+  <meta name="apple-mobile-web-app-title" content="Kocie przepychanki">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 </head>
 <body>
   <!-- Grafiki pionków (kolor dziedziczony przez currentColor) -->
@@ -108,7 +117,25 @@
     <form method="dialog"><button>Grajmy!</button></form>
   </dialog>
 
-  <script src="js/logic.js"></script>
-  <script src="js/ui.js"></script>
+  <div class="app-banner" id="install-banner" data-testid="install-banner" hidden>
+    <img src="./icons/icon-192.png" alt="" width="40" height="40">
+    <div class="app-banner-text">
+      <strong>Zainstaluj Kocie przepychanki</strong>
+      <span class="only-prompt">Gra na ekranie głównym, działa też bez internetu.</span>
+      <span class="only-ios">Stuknij <b>Udostępnij</b>, potem <b>Do ekranu początkowego</b>.</span>
+    </div>
+    <button class="primary only-prompt" id="btn-install" type="button">Zainstaluj</button>
+    <button class="close" id="btn-install-close" type="button" aria-label="Nie pokazuj więcej">✕</button>
+  </div>
+  <div class="app-banner" id="update-banner" data-testid="update-banner" role="alert" hidden>
+    <div class="app-banner-text">
+      <strong>Dostępna nowa wersja gry</strong>
+      <span>Twoja partia zostanie zachowana.</span>
+    </div>
+    <button class="primary" id="btn-update" type="button">Odśwież</button>
+    <button id="btn-update-later" type="button">Później</button>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

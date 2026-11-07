@@ -3,9 +3,27 @@
 Gra dla dwóch osób w przeglądarce. Plansza 6×6 wygląda jak niebieska, pikowana kołderka.
 Gracz pomarańczowy i gracz szary na zmianę stawiają myszy i koty, które się przepychają.
 
-## Jak uruchomić
+Działa w przeglądarce i na telefonie (PWA, także offline), budowana do jednego pliku
+`index.html` i publikowana na GitHub Pages:
+**https://zbludzakowe-zabawy.github.io/Kocie-przepychanki/**
 
-Otwórz `index.html` w przeglądarce. Nie trzeba niczego instalować ani budować.
+## Instalacja jako aplikacja
+
+- **Android / Chrome / Edge:** na dole pojawia się baner „Zainstaluj” (albo menu przeglądarki → „Zainstaluj aplikację”).
+- **iPhone / iPad (Safari):** Udostępnij → „Do ekranu początkowego”.
+
+Zainstalowana gra działa bez internetu. Gdy pojawi się nowa wersja, gra pokazuje komunikat
+„Dostępna nowa wersja” z przyciskiem „Odśwież”. Bieżąca partia zapisuje się w przeglądarce
+i wraca po odświeżeniu lub ponownym otwarciu.
+
+## Uruchomienie
+
+```bash
+npm install
+npm run dev          # serwer deweloperski
+npm run build        # dist/index.html + manifest, ikony, service worker
+npm run preview      # podgląd zbudowanej wersji na porcie 4173
+```
 
 ## Zasady
 
@@ -30,15 +48,37 @@ Otwórz `index.html` w przeglądarce. Nie trzeba niczego instalować ani budowa�
 W grze można cofać ruchy (przycisk „Cofnij”). Po najechaniu na pole widać, które pionki
 zostaną przepchnięte (żółta obwódka) i które spadną z planszy (czerwona obwódka).
 
-## Struktura
-
-- `index.html`, `css/style.css`: strona i wygląd planszy
-- `js/logic.js`: zasady gry (czysta logika bez DOM, działa też w Node)
-- `js/ui.js`: interfejs i animacje
-- `tests/logic.test.js`: testy logiki
-
 ## Testy
 
 ```bash
-npm test
+npm test             # testy jednostkowe (node --test, tests/unit)
+npm run test:e2e     # testy w przeglądarce (Playwright, tests/e2e) – komputer i telefon
+npm run test:all     # wszystko po kolei
 ```
+
+Przed pierwszym `test:e2e`: `npx playwright install chromium`.
+
+## Struktura
+
+```
+index.html           strona, grafiki pionków (SVG), banery instalacji i aktualizacji
+src/
+  logic.js           zasady gry – czysta logika bez DOM, pokryta testami
+  ui.js              plansza, animacje, cofanie, autozapis partii
+  pwa.js             instalacja i komunikat „Dostępna nowa wersja”
+  storage.js         zapis w przeglądarce (localStorage)
+  sw-template.js     service worker (działanie offline), wersja nadawana przy buildzie
+  style.css          wygląd
+public/              manifest i ikony aplikacji
+tests/
+  unit/              testy jednostkowe
+  e2e/               Playwright
+```
+
+## Jednorazowa konfiguracja GitHub Pages
+
+Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+
+## Licencja
+
+BSD 2-Clause – zobacz [LICENSE](LICENSE).

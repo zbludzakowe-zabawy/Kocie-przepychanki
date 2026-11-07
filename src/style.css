@@ -19,7 +19,9 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-  padding: 16px;
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
 .top {
@@ -233,7 +235,6 @@ dialog li { margin-bottom: 8px; line-height: 1.4; }
 dialog form { text-align: right; }
 
 @media (max-width: 860px) {
-  body { padding: 12px; }
   .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   .layout > * { min-width: 0; }
   .board-wrap { grid-column: 1 / -1; grid-row: 1; padding: 8px; }
@@ -245,6 +246,36 @@ dialog form { text-align: right; }
   .player h2 { font-size: 0.95rem; }
 }
 
+/* ---------- Baner instalacji / nowej wersji ---------- */
+/* miejsce pod banerem, żeby nie zasłaniał paneli graczy */
+body:has(.app-banner:not([hidden])) { padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)); }
+
+.app-banner {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(20, 40, 80, 0.3);
+}
+.app-banner img { border-radius: 10px; flex: none; }
+.app-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+.app-banner-text span { color: var(--muted); }
+.app-banner button.primary { background: var(--quilt); color: #fff; }
+.app-banner button.close { border: none; box-shadow: none; padding: 6px 8px; }
+.app-banner[data-mode="ios"] .only-prompt,
+.app-banner[data-mode="prompt"] .only-ios { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   :root { --anim: 1ms; }
 }
+[hidden] { display: none !important; }
