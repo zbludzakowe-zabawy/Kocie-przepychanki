@@ -122,15 +122,37 @@ test('mieszana trójka (kot + myszy) też zamienia się w koty', () => {
   assert.equal(r3.state.pools[0].cat, 0);
 });
 
-test('trójka utworzona przepchnięciem przeciwnika też się liczy', () => {
+test('trójka utworzona ruchem przeciwnika się nie zamienia (czeka na ruch właściciela)', () => {
   const s = L.createGame();
   put(s, 0, 0, 1, L.MOUSE);
   put(s, 0, 1, 1, L.MOUSE);
   put(s, 1, 3, 1, L.MOUSE);
   // pomarańczowy stawia mysz na (2,4): mysz szarego z (1,3) leci na (0,2)
-  const { state } = L.placePiece(s, 2, 4, L.MOUSE);
-  assert.equal(state.pools[1].cat, 3);
-  assert.equal(state.board[0][0], null);
+  const { state, events } = L.placePiece(s, 2, 4, L.MOUSE);
+  assert.equal(state.board[0][2].owner, 1);
+  assert.equal(L.findLines(state.board, 1).length, 1);
+  assert.equal(state.pools[1].cat, 0);
+  assert.equal(events.promoted.length, 0);
+  // szary wykonuje dowolny ruch daleko od rzędu — teraz jego trójka się zamienia
+  const r = L.placePiece(state, 5, 5, L.MOUSE);
+  assert.equal(r.state.pools[1].cat, 3);
+  assert.equal(r.state.board[0][0], null);
+  assert.equal(r.state.board[0][2], null);
+  assert.equal(r.events.promoted.length, 3);
+});
+
+test('ruch gracza nie zamienia trójki przeciwnika, nawet gdy obaj mają rząd', () => {
+  const s = L.createGame();
+  put(s, 5, 0, 1, L.MOUSE);
+  put(s, 5, 1, 1, L.MOUSE);
+  put(s, 5, 2, 1, L.MOUSE);
+  put(s, 0, 0, 0, L.MOUSE);
+  put(s, 0, 1, 0, L.MOUSE);
+  const { state, events } = L.placePiece(s, 0, 2, L.MOUSE);
+  assert.equal(state.pools[0].cat, 3); // trójka gracza wykonującego ruch — zamiana
+  assert.equal(state.pools[1].cat, 0); // trójka przeciwnika zostaje
+  assert.equal(state.board[5][1].owner, 1);
+  assert.ok(events.promoted.every((p) => p.owner === 0));
 });
 
 test('trzy koty w rzędzie — wygrana', () => {
@@ -168,13 +190,53 @@ test('8 pionków na planszy — gracz wybiera mysz, która staje się kotem', ()
   assert.equal(after.current, 1);
 });
 
+test('8 pionków na planszy i rząd — gracz wybiera jeden pionek albo rząd', () => {
+  // 7 myszy pomarańczowego, w tym (0,0) i (0,1); ostatnia mysz na (0,2) domknie rząd
+  const spots = [[0, 0], [0, 1], [2, 0], [2, 4], [4, 0], [4, 2], [4, 4]];
+  const setup = () => {
+    const s = L.createGame();
+    for (const [r, c] of spots) put(s, r, c, 0, L.MOUSE);
+    return s;
+  };
+
+  // bez rzędu: zwykły wybór myszy, opcja rzędu niedostępna
+  const plain = L.placePiece(setup(), 0, 3, L.MOUSE).state;
+  assert.equal(plain.phase, 'choose');
+  assert.equal(L.choosableLineCells(plain).length, 0);
+  assert.equal(L.chooseLines(plain), null);
+
+  const { state, events } = L.placePiece(setup(), 0, 2, L.MOUSE); // (0,1) stoi, bo (0,0) zajęte
+  assert.equal(events.promoted.length, 0); // nic nie zamienia się samo
+  assert.equal(state.phase, 'choose');
+  assert.equal(state.current, 0);
+  assert.equal(L.choosableLineCells(state).length, 3);
+  assert.equal(L.choosableCells(state).length, 8);
+
+  // wariant A: zamieniają się pionki z rzędu
+  const a = L.chooseLines(state);
+  assert.equal(a.events.promoted.length, 3);
+  assert.deepEqual(a.state.pools[0], { mouse: 0, cat: 3 });
+  assert.equal(a.state.board[0][0], null);
+  assert.equal(a.state.phase, 'place');
+  assert.equal(a.state.current, 1);
+
+  // wariant B: zamienia się jeden wskazany pionek, rząd zostaje na planszy
+  const b = L.choosePiece(state, 4, 4);
+  assert.deepEqual(b.state.pools[0], { mouse: 0, cat: 1 });
+  assert.equal(L.findLines(b.state.board, 0).length, 1);
+  assert.equal(b.state.phase, 'place');
+  assert.equal(b.state.current, 1);
+});
+
 test('liczba pionków każdego gracza zawsze wynosi 8 (losowe partie)', () => {
   let seed = 12345;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let g = 0; g < 200; g++) {
     let s = L.createGame();
     for (let move = 0; move < 300 && s.phase !== 'over'; move++) {
-      if (s.phase === 'choose') {
+      if (s.phase === 'choose' && L.choosableLineCells(s).length && rand() < 0.5) {
+        s = L.chooseLines(s).state;
+      } else if (s.phase === 'choose') {
         const cells = L.choosableCells(s);
         const [r, c] = cells[Math.floor(rand() * cells.length)];
         s = L.choosePiece(s, r, c).state;

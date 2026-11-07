@@ -75,3 +75,42 @@ test('aplikacja do zainstalowania działa bez internetu', async ({ page, context
   await expect(page.locator('.piece')).toHaveCount(1);
   await context.setOffline(false);
 });
+
+test('8 pionków na planszy i rząd — wybór: rząd albo jeden pionek', async ({ page }) => {
+  // pomarańczowy ma 7 myszy na planszy, w tym (0,0) i (0,1); ósma na (0,2) domknie rząd
+  const board = Array.from({ length: 6 }, () => Array(6).fill(null));
+  let id = 1;
+  for (const [r, c] of [[0, 0], [0, 1], [2, 0], [2, 4], [4, 0], [4, 2], [4, 4]]) {
+    board[r][c] = { id: id++, owner: 0, type: 'mouse' };
+  }
+  const state = {
+    board, pools: [{ mouse: 1, cat: 0 }, { mouse: 8, cat: 0 }],
+    current: 0, phase: 'place', winner: null, winLine: null, nextId: id,
+  };
+  await page.evaluate((s) => {
+    localStorage.setItem('kocie-przepychanki:game', JSON.stringify({ state: s, history: [] }));
+  }, state);
+  await page.reload();
+
+  const linesBtn = page.locator('#btn-lines');
+  await expect(linesBtn).toBeHidden();
+  await cell(page, 0, 2).click();
+  await expect(page.locator('#status')).toContainText('pionki w rzędzie');
+  await expect(linesBtn).toBeVisible();
+  await expect(page.locator('.cell.in-line')).toHaveCount(3);
+
+  // wariant A: zamieniają się pionki z rzędu
+  await linesBtn.click();
+  await expect(page.locator('#board:not([data-busy])')).toBeVisible();
+  await expect(page.locator('#player-0 [data-count="cat"]')).toHaveText('3');
+  await expect(page.locator('#status')).toContainText('gracz szary');
+  await expect(linesBtn).toBeHidden();
+
+  // wariant B (po cofnięciu): zamienia się jeden pionek, rząd zostaje
+  await page.locator('#btn-undo').click();
+  await expect(linesBtn).toBeVisible();
+  await cell(page, 4, 4).click();
+  await expect(page.locator('#player-0 [data-count="cat"]')).toHaveText('1');
+  await expect(page.locator('.piece')).toHaveCount(7);
+  await expect(linesBtn).toBeHidden();
+});

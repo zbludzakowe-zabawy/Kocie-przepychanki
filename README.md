@@ -38,10 +38,14 @@ npm run preview      # podgląd zbudowanej wersji na porcie 4173
 7. **Trzy pionki jednego gracza w rzędzie** (poziomo, pionowo lub po skosie, myszy i koty
    w dowolnej kombinacji) zamieniają się w koty: schodzą z planszy, a do zasobnika
    trafiają koty, które można potem postawić. Jeśli rząd jest dłuższy niż 3, zamieniają się
-   wszystkie jego pionki. Liczą się też rzędy powstałe przez przepchnięcie,
-   również rzędy przeciwnika.
-8. Gdy gracz ma **wszystkie 8 pionków na planszy**, wybiera jedną swoją mysz, która
-   zamienia się w kota (schodzi z planszy, a kot trafia do zasobnika).
+   wszystkie jego pionki. Zamiana następuje **tylko po ruchu gracza, do którego należą
+   pionki w rzędzie**. Jeśli rząd powstał w wyniku ruchu przeciwnika (przez przepchnięcie),
+   pionki się nie zamieniają i zostają na planszy; zamienią się po najbliższym ruchu
+   właściciela, jeśli rząd nadal będzie stał.
+8. Gdy gracz po swoim ruchu ma **wszystkie 8 pionków na planszy**, wybiera jedną swoją mysz,
+   która zamienia się w kota (schodzi z planszy, a kot trafia do zasobnika). Jeśli w tym
+   samym momencie ma też **trzy pionki w rzędzie**, wybiera: zamienia się jeden wskazany
+   przez niego pionek albo pionki z rzędu.
 9. **Wygrywa** ten, kto ustawi w rzędzie **trzy swoje koty**. Jeśli po ruchu obaj gracze mają
    trzy koty w rzędzie, wygrywa gracz, który wykonał ruch.
 

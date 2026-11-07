@@ -63,6 +63,8 @@ button:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: 0 
   min-height: 1.6em;
   font-weight: bold;
 }
+.choice { text-align: center; margin: -4px auto 12px; }
+.choice:has(button[hidden]) { display: none; }
 .status .dot {
   display: inline-block;
   width: 0.8em;
@@ -167,7 +169,8 @@ button:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: 0 
 .cell.hover-bad { cursor: not-allowed; }
 .cell.will-push::after,
 .cell.will-fall::after,
-.cell.choosable::after {
+.cell.choosable::after,
+.cell.in-line::before {
   content: "";
   position: absolute;
   inset: 10%;
@@ -177,6 +180,8 @@ button:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: 0 
 .cell.will-push::after { box-shadow: 0 0 0 3px #ffd54a; }
 .cell.will-fall::after { box-shadow: 0 0 0 3px #ff6b6b; }
 .cell.choosable::after { box-shadow: 0 0 0 4px #ffd54a; animation: pulse 1s infinite alternate; }
+/* pionki rzędu, które gracz może zamienić przyciskiem zamiast jednego pionka */
+.cell.in-line::before { inset: 4px; border: 3px solid #7be07b; border-radius: 12px; }
 
 /* guziczki pikowania na przecięciach */
 .tuft {
