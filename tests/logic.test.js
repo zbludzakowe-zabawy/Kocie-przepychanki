@@ -1,0 +1,197 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const L = require('../js/logic.js');
+
+/** Pomocnik: ustawia pionek bezpośrednio na planszy (z pominięciem zasobnika). */
+function put(state, r, c, owner, type) {
+  state.board[r][c] = { id: state.nextId++, owner, type };
+  state.pools[owner][type === L.CAT ? 'cat' : 'mouse'] -= type === L.CAT ? 0 : 1;
+  return state.board[r][c];
+}
+
+function count(state, owner) {
+  let n = 0;
+  for (const row of state.board) for (const p of row) if (p && p.owner === owner) n++;
+  return n + L.poolTotal(state.pools[owner]);
+}
+
+test('start: 8 myszy w zasobniku każdego gracza, zaczyna gracz pomarańczowy (0)', () => {
+  const s = L.createGame();
+  assert.deepEqual(s.pools, [{ mouse: 8, cat: 0 }, { mouse: 8, cat: 0 }]);
+  assert.equal(s.current, 0);
+  assert.equal(s.board.length, 6);
+  assert.ok(s.board.every((row) => row.length === 6 && row.every((x) => x === null)));
+});
+
+test('wstawienie pionka zdejmuje go z zasobnika i zmienia gracza', () => {
+  const { state } = L.placePiece(L.createGame(), 2, 2, L.MOUSE);
+  assert.equal(state.pools[0].mouse, 7);
+  assert.equal(state.board[2][2].owner, 0);
+  assert.equal(state.current, 1);
+});
+
+test('nie można postawić na zajętym polu ani bez pionka w zasobniku', () => {
+  let s = L.placePiece(L.createGame(), 2, 2, L.MOUSE).state;
+  assert.equal(L.placePiece(s, 2, 2, L.MOUSE), null);
+  assert.equal(L.placePiece(s, 3, 3, L.CAT), null); // brak kotów
+});
+
+test('mysz odpycha sąsiednie myszy (wszystkie 8 kierunków), ale nie koty', () => {
+  const s = L.createGame();
+  put(s, 1, 1, 1, L.MOUSE);
+  put(s, 1, 2, 1, L.MOUSE);
+  put(s, 2, 3, 0, L.MOUSE);
+  const cat = put(s, 3, 2, 1, L.CAT);
+  const { state } = L.placePiece(s, 2, 2, L.MOUSE);
+  assert.equal(state.board[0][0].owner, 1); // z (1,1) po skosie
+  assert.equal(state.board[0][2].owner, 1); // z (1,2) w górę
+  assert.equal(state.board[2][4].owner, 0); // własna mysz też się odsuwa
+  assert.equal(state.board[3][2].id, cat.id); // kot stoi
+  assert.equal(state.board[1][1], null);
+});
+
+test('kot odpycha wszystkie sąsiednie pionki (koty i myszy)', () => {
+  const s = L.createGame();
+  s.pools[0].cat = 1;
+  s.pools[0].mouse = 7;
+  put(s, 3, 2, 1, L.CAT);
+  put(s, 2, 1, 1, L.MOUSE);
+  const { state } = L.placePiece(s, 2, 2, L.CAT);
+  assert.equal(state.board[4][2].type, L.CAT);
+  assert.equal(state.board[2][0].type, L.MOUSE);
+  assert.equal(state.pools[0].cat, 0);
+});
+
+test('pionek nie przesuwa się, gdy pole za nim jest zajęte', () => {
+  const s = L.createGame();
+  put(s, 2, 3, 1, L.MOUSE);
+  put(s, 2, 4, 1, L.MOUSE);
+  const { state } = L.placePiece(s, 2, 2, L.MOUSE);
+  assert.equal(state.board[2][3].owner, 1);
+  assert.equal(state.board[2][4].owner, 1);
+});
+
+test('pionek wypchnięty poza planszę wraca do zasobnika właściciela', () => {
+  const s = L.createGame();
+  s.pools[0].cat = 1;
+  s.pools[0].mouse = 7;
+  put(s, 0, 1, 1, L.CAT);
+  s.pools[1].mouse = 8; // put() nie zdejmuje kotów; zasobnik 1 nadal ma 8 myszy
+  put(s, 1, 0, 1, L.MOUSE);
+  const { state, events } = L.placePiece(s, 1, 1, L.CAT);
+  assert.equal(state.board[0][1], null);
+  assert.equal(state.board[1][0], null);
+  assert.equal(state.pools[1].cat, 1);
+  assert.equal(state.pools[1].mouse, 8);
+  assert.equal(events.pushes.filter((p) => p.off).length, 2);
+});
+
+test('trzy pionki w rzędzie zamieniają się w koty i wracają do zasobnika', () => {
+  const s = L.createGame();
+  put(s, 4, 0, 0, L.MOUSE);
+  put(s, 4, 1, 0, L.MOUSE);
+  const { state, events } = L.placePiece(s, 4, 2, L.MOUSE);
+  assert.equal(state.board[4][0], null);
+  assert.equal(state.board[4][1], null);
+  assert.equal(state.board[4][2], null);
+  assert.equal(state.pools[0].cat, 3);
+  assert.equal(state.pools[0].mouse, 5);
+  assert.equal(events.promoted.length, 3);
+  assert.equal(count(state, 0), 8);
+});
+
+test('mieszana trójka (kot + myszy) też zamienia się w koty', () => {
+  const s = L.createGame();
+  s.pools[0] = { mouse: 6, cat: 0 };
+  s.board[0][0] = { id: 90, owner: 0, type: L.CAT };
+  s.board[1][1] = { id: 91, owner: 0, type: L.MOUSE };
+  const { state } = L.placePiece(s, 5, 5, L.MOUSE); // daleko, nic nie popycha
+  assert.equal(state.board[0][0].type, L.CAT); // jeszcze nie ma trójki
+  const s2 = L.createGame();
+  s2.pools[0] = { mouse: 6, cat: 0 };
+  s2.board[0][0] = { id: 90, owner: 0, type: L.CAT };
+  s2.board[0][1] = { id: 91, owner: 0, type: L.MOUSE };
+  const r = L.placePiece(s2, 0, 3, L.MOUSE); // (0,2) pusty -> brak trójki
+  assert.equal(r.state.pools[0].cat, 0);
+  const s3 = L.createGame();
+  s3.pools[0] = { mouse: 6, cat: 0 };
+  s3.board[0][0] = { id: 90, owner: 0, type: L.CAT };
+  s3.board[2][0] = { id: 91, owner: 0, type: L.MOUSE };
+  const r3 = L.placePiece(s3, 1, 0, L.MOUSE); // mysz nie rusza kota, ale pcha mysz (2,0) -> (3,0)
+  assert.equal(r3.state.board[3][0].owner, 0);
+  assert.equal(r3.state.pools[0].cat, 0);
+});
+
+test('trójka utworzona przepchnięciem przeciwnika też się liczy', () => {
+  const s = L.createGame();
+  put(s, 0, 0, 1, L.MOUSE);
+  put(s, 0, 1, 1, L.MOUSE);
+  put(s, 1, 3, 1, L.MOUSE);
+  // pomarańczowy stawia mysz na (2,4): mysz szarego z (1,3) leci na (0,2)
+  const { state } = L.placePiece(s, 2, 4, L.MOUSE);
+  assert.equal(state.pools[1].cat, 3);
+  assert.equal(state.board[0][0], null);
+});
+
+test('trzy koty w rzędzie — wygrana', () => {
+  const s = L.createGame();
+  s.pools[0] = { mouse: 5, cat: 1 };
+  s.board[3][0] = { id: 90, owner: 0, type: L.CAT };
+  s.board[3][1] = { id: 91, owner: 0, type: L.CAT };
+  const { state } = L.placePiece(s, 3, 3, L.CAT); // (3,2) puste -> brak
+  assert.equal(state.phase, 'place');
+  const s2 = L.createGame();
+  s2.pools[0] = { mouse: 5, cat: 1 };
+  s2.board[0][0] = { id: 90, owner: 0, type: L.CAT };
+  s2.board[1][1] = { id: 91, owner: 0, type: L.CAT };
+  const r = L.placePiece(s2, 2, 2, L.CAT); // kot pcha (1,1) na (0,0)? zajęte -> stoi
+  assert.equal(r.state.phase, 'over');
+  assert.equal(r.state.winner, 0);
+  assert.equal(r.state.winLine.length, 3);
+});
+
+test('8 pionków na planszy — gracz wybiera mysz, która staje się kotem', () => {
+  const s = L.createGame();
+  // pomarańczowy ma 7 myszy rozstawionych bez trójek, 1 w zasobniku
+  const spots = [[0, 0], [0, 2], [0, 4], [2, 0], [2, 4], [4, 0], [4, 2]];
+  for (const [r, c] of spots) put(s, r, c, 0, L.MOUSE);
+  assert.equal(s.pools[0].mouse, 1);
+  const { state } = L.placePiece(s, 5, 5, L.MOUSE);
+  assert.equal(state.phase, 'choose');
+  assert.equal(state.current, 0);
+  assert.equal(L.choosableCells(state).length, 8);
+  assert.equal(L.choosePiece(state, 1, 1), null); // puste pole
+  const after = L.choosePiece(state, 0, 0).state;
+  assert.equal(after.board[0][0], null);
+  assert.deepEqual(after.pools[0], { mouse: 0, cat: 1 });
+  assert.equal(after.phase, 'place');
+  assert.equal(after.current, 1);
+});
+
+test('liczba pionków każdego gracza zawsze wynosi 8 (losowe partie)', () => {
+  let seed = 12345;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (let g = 0; g < 200; g++) {
+    let s = L.createGame();
+    for (let move = 0; move < 300 && s.phase !== 'over'; move++) {
+      if (s.phase === 'choose') {
+        const cells = L.choosableCells(s);
+        const [r, c] = cells[Math.floor(rand() * cells.length)];
+        s = L.choosePiece(s, r, c).state;
+      } else {
+        const empty = [];
+        for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) if (!s.board[r][c]) empty.push([r, c]);
+        const pool = s.pools[s.current];
+        const types = [];
+        if (pool.mouse) types.push(L.MOUSE);
+        if (pool.cat) types.push(L.CAT);
+        const [r, c] = empty[Math.floor(rand() * empty.length)];
+        const t = types[Math.floor(rand() * types.length)];
+        s = L.placePiece(s, r, c, t).state;
+      }
+      assert.equal(count(s, 0), 8);
+      assert.equal(count(s, 1), 8);
+    }
+  }
+});

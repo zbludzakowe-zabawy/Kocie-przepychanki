@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kocie przepychanki</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Grafiki pionków (kolor dziedziczony przez currentColor) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="icon-mouse" viewBox="0 0 100 100">
+        <path d="M78 72 C92 74 96 86 86 92 C80 95 74 92 76 88" fill="none" stroke="#5b4636" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="30" cy="30" r="17" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5"/>
+        <circle cx="70" cy="30" r="17" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5"/>
+        <circle cx="30" cy="30" r="9" fill="#f6b8c4"/>
+        <circle cx="70" cy="30" r="9" fill="#f6b8c4"/>
+        <ellipse cx="50" cy="60" rx="31" ry="28" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5"/>
+        <ellipse cx="50" cy="66" rx="17" ry="13" fill="#fff" opacity=".35"/>
+        <circle cx="39" cy="55" r="4.5" fill="#222"/>
+        <circle cx="61" cy="55" r="4.5" fill="#222"/>
+        <circle cx="40.5" cy="53.5" r="1.4" fill="#fff"/>
+        <circle cx="62.5" cy="53.5" r="1.4" fill="#fff"/>
+        <ellipse cx="50" cy="66" rx="5" ry="4" fill="#e66a86"/>
+        <path d="M44 66 L26 62 M44 69 L27 71 M56 66 L74 62 M56 69 L73 71" stroke="#333" stroke-width="1.4" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="icon-cat" viewBox="0 0 100 100">
+        <path d="M18 46 L20 10 L44 30 Z" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M82 46 L80 10 L56 30 Z" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M24 36 L25 19 L37 30 Z" fill="#f6b8c4"/>
+        <path d="M76 36 L75 19 L63 30 Z" fill="#f6b8c4"/>
+        <ellipse cx="50" cy="56" rx="38" ry="33" fill="currentColor" stroke="rgba(0,0,0,.35)" stroke-width="2.5"/>
+        <path d="M50 24 L50 34 M40 26 L42 35 M60 26 L58 35" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="50" cy="70" rx="18" ry="12" fill="#fff" opacity=".4"/>
+        <ellipse cx="36" cy="52" rx="6" ry="7.5" fill="#d9f25a" stroke="#222" stroke-width="1.5"/>
+        <ellipse cx="64" cy="52" rx="6" ry="7.5" fill="#d9f25a" stroke="#222" stroke-width="1.5"/>
+        <ellipse cx="36" cy="52.5" rx="2" ry="6" fill="#222"/>
+        <ellipse cx="64" cy="52.5" rx="2" ry="6" fill="#222"/>
+        <path d="M46 63 L54 63 L50 68 Z" fill="#e66a86"/>
+        <path d="M50 68 Q50 74 44 74 M50 68 Q50 74 56 74" fill="none" stroke="#333" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M40 66 L14 60 M40 70 L15 73 M60 66 L86 60 M60 70 L85 73" stroke="#333" stroke-width="1.4" stroke-linecap="round"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <h1>Kocie przepychanki</h1>
+    <div class="actions">
+      <button id="btn-undo" type="button">↶ Cofnij</button>
+      <button id="btn-new" type="button">Nowa gra</button>
+      <button id="btn-rules" type="button">Zasady</button>
+    </div>
+  </header>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <main class="layout">
+    <section class="player" id="player-0" data-player="0">
+      <h2>Gracz pomarańczowy</h2>
+      <div class="pool">
+        <button class="pool-btn" data-type="mouse" type="button">
+          <svg><use href="#icon-mouse"/></svg>
+          <span class="label">Myszy</span>
+          <span class="count" data-count="mouse">8</span>
+        </button>
+        <button class="pool-btn" data-type="cat" type="button">
+          <svg><use href="#icon-cat"/></svg>
+          <span class="label">Koty</span>
+          <span class="count" data-count="cat">0</span>
+        </button>
+      </div>
+    </section>
+
+    <div class="board-wrap">
+      <div id="board" class="board" aria-label="Plansza 6 na 6"></div>
+    </div>
+
+    <section class="player" id="player-1" data-player="1">
+      <h2>Gracz szary</h2>
+      <div class="pool">
+        <button class="pool-btn" data-type="mouse" type="button">
+          <svg><use href="#icon-mouse"/></svg>
+          <span class="label">Myszy</span>
+          <span class="count" data-count="mouse">8</span>
+        </button>
+        <button class="pool-btn" data-type="cat" type="button">
+          <svg><use href="#icon-cat"/></svg>
+          <span class="label">Koty</span>
+          <span class="count" data-count="cat">0</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="rules">
+    <h2>Zasady</h2>
+    <ul>
+      <li>Gra dla dwóch osób na planszy 6×6. Każdy gracz zaczyna z 8 myszami w zasobniku. Zaczyna gracz pomarańczowy.</li>
+      <li>Gracze na zmianę stawiają jeden pionek ze swojego zasobnika na dowolne wolne pole.</li>
+      <li><b>Mysz</b> odpycha o jedno pole wszystkie sąsiednie myszy (8 pól dookoła). Kotów nie rusza.</li>
+      <li><b>Kot</b> odpycha o jedno pole wszystkie sąsiednie pionki — koty i myszy.</li>
+      <li>Pionek nie przesunie się, jeśli pole za nim jest zajęte. Pionek wypchnięty poza planszę wraca do zasobnika właściciela.</li>
+      <li>Trzy pionki jednego gracza w rzędzie (poziomo, pionowo lub po skosie, myszy i koty dowolnie pomieszane) zamieniają się w koty: schodzą z planszy, a do zasobnika trafiają koty.</li>
+      <li>Gdy gracz ma wszystkie 8 pionków na planszy, wybiera jedną swoją mysz, która zamienia się w kota (schodzi do zasobnika).</li>
+      <li><b>Wygrywa</b> ten, kto ustawi w rzędzie trzy swoje koty.</li>
+    </ul>
+    <form method="dialog"><button>Grajmy!</button></form>
+  </dialog>
+
+  <script src="js/logic.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
