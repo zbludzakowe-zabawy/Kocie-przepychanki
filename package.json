@@ -1,0 +1,10 @@
+{
+  "name": "kocie-przepychanki",
+  "version": "1.0.0",
+  "description": "Kocie przepychanki - gra planszowa dla dwóch osób w przeglądarce",
+  "private": true,
+  "license": "BSD-2-Clause",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
