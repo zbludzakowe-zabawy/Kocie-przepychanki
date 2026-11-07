@@ -1,7 +1,8 @@
 /* Kocie przepychanki — interfejs w przeglądarce. */
-(function () {
-  'use strict';
-  const L = window.KocieLogic;
+import * as L from './logic.js';
+import { loadPref, savePref } from './storage.js';
+
+export function initGame() {
   const SIZE = L.SIZE;
   const NAMES = ['pomarańczowy', 'szary'];
   const COLORS = ['var(--orange)', 'var(--gray)'];
@@ -11,8 +12,17 @@
   const undoBtn = document.getElementById('btn-undo');
   const panels = [document.getElementById('player-0'), document.getElementById('player-1')];
 
+  const SAVE_KEY = 'game';
+  const MAX_HISTORY = 200;
   let state = L.createGame();
   let history = [];
+  // Partia zapisuje się w przeglądarce i wraca po odświeżeniu / ponownym otwarciu aplikacji.
+  const saved = loadPref(SAVE_KEY, null);
+  if (saved && L.isValidState(saved.state)) {
+    state = saved.state;
+    history = Array.isArray(saved.history) ? saved.history.filter(L.isValidState).slice(-MAX_HISTORY) : [];
+  }
+  const save = () => savePref(SAVE_KEY, { state, history: history.slice(-MAX_HISTORY) });
   let selected = [L.MOUSE, L.MOUSE];
   let animating = false;
   let hoverCell = null;
@@ -153,6 +163,7 @@
   }
 
   function render() {
+    save();
     syncPieces();
     renderPanels();
     renderStatus();
@@ -161,8 +172,14 @@
   }
 
   // ---------- animacja ruchu ----------
+  function setBusy(v) {
+    animating = v;
+    if (v) boardEl.dataset.busy = '1';
+    else delete boardEl.dataset.busy;
+  }
+
   async function animate(events) {
-    animating = true;
+    setBusy(true);
     updateHints();
     if (events.placed) {
       const { id, owner, type, at } = events.placed;
@@ -191,7 +208,7 @@
       }
       await wait(ANIM * 1.4);
     }
-    animating = false;
+    setBusy(false);
   }
 
   async function apply(result) {
@@ -238,7 +255,19 @@
 
   document.getElementById('btn-new').addEventListener('click', () => {
     if (animating) return;
-    if (history.length && state.phase !== 'over' && !confirm('Zacząć nową grę?')) return;
+    // Potwierdzenie w samej stronie (okienka confirm() nie działają w każdym widoku).
+    const btn = document.getElementById('btn-new');
+    if (history.length && state.phase !== 'over' && !btn.dataset.armed) {
+      btn.dataset.armed = '1';
+      btn.textContent = 'Na pewno? Kliknij ponownie';
+      setTimeout(() => {
+        delete btn.dataset.armed;
+        btn.textContent = 'Nowa gra';
+      }, 3000);
+      return;
+    }
+    delete btn.dataset.armed;
+    btn.textContent = 'Nowa gra';
     state = L.createGame();
     history = [];
     selected = [L.MOUSE, L.MOUSE];
@@ -251,4 +280,4 @@
   document.getElementById('btn-rules').addEventListener('click', () => rules.showModal());
 
   render();
-})();
+}
