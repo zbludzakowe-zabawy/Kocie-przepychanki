@@ -28,7 +28,7 @@ function createGame() {
       { mouse: PIECES_PER_PLAYER, cat: 0 },
     ],
     current: 0,
-    phase: 'place', // 'place' | 'choose' | 'over'
+    phase: 'place', // 'place' | 'choose' | 'line' | 'over'
     winner: null,
     winLine: null,
     nextId: 1,
@@ -162,20 +162,59 @@ function placePiece(state, r, c, type) {
 
   // 5. Trzy pionki w rzędzie zamieniają się w koty tylko po ruchu ich właściciela.
   //    Rzędy przeciwnika (np. powstałe przez przepchnięcie) zostają na planszy.
-  promoteLines(s, player, events);
-
-  s.current = 1 - player;
+  //    Rząd dłuższy niż 3 — gracz wybiera, które 3 pionki się zamienią (faza 'line').
+  resolveLines(s, player, events);
   return { state: s, events };
 }
 
-/** Zdejmuje z planszy wszystkie pionki z rzędów gracza `owner` i daje mu tyle kotów. */
-function promoteLines(s, owner, events) {
-  for (const [a, b] of lineCells(s.board, owner)) {
+/**
+ * Zamienia rzędy gracza `owner` i kończy jego turę. Jeśli któryś rząd jest dłuższy
+ * niż 3, nic się jeszcze nie zamienia — gracz najpierw wybiera trzy pionki (faza 'line').
+ */
+function resolveLines(s, owner, events) {
+  if (longRuns(s.board, owner).length) {
+    s.phase = 'line';
+    return;
+  }
+  promoteCells(s, owner, lineCells(s.board, owner), events);
+  s.phase = 'place';
+  s.current = 1 - owner;
+}
+
+/** Zdejmuje z planszy pionki z pól `cells` i daje graczowi `owner` tyle kotów. */
+function promoteCells(s, owner, cells, events) {
+  for (const [a, b] of cells) {
     const p = s.board[a][b];
     s.board[a][b] = null;
     s.pools[owner].cat++;
     events.promoted.push({ id: p.id, owner, at: [a, b] });
   }
+}
+
+/**
+ * Najdłuższe ciągłe rzędy (co najmniej 3 pola) gracza `owner` w każdym kierunku.
+ * Każdy element to lista pól w kolejności wzdłuż rzędu.
+ */
+function findRuns(board, owner) {
+  const own = (r, c) => inside(r, c) && board[r][c] && board[r][c].owner === owner;
+  const runs = [];
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      for (const [dr, dc] of LINE_DIRS) {
+        // początek rzędu: własny pionek, a pole przed nim nie jest własne
+        if (!own(r, c) || own(r - dr, c - dc)) continue;
+        const cells = [];
+        for (let a = r, b = c; own(a, b); a += dr, b += dc) cells.push([a, b]);
+        if (cells.length >= 3) runs.push(cells);
+      }
+    }
+  }
+  return runs;
+}
+
+/** Rzędy gracza `owner` dłuższe niż 3 pionki. */
+function longRuns(board, owner) {
+  return findRuns(board, owner).filter((run) => run.length > 3);
 }
 
 /** Pola wszystkich rzędów gracza `owner` (bez powtórzeń). */
@@ -195,15 +234,56 @@ function choosableLineCells(state) {
 
 /**
  * Faza 'choose', gdy gracz ma też rząd: zamiast jednego pionka zamieniają się
- * w koty pionki z rzędu. Zwraca { state, events } albo null.
+ * w koty pionki z rzędu (przy rzędzie dłuższym niż 3 — gracz najpierw wybiera
+ * trzy z nich w fazie 'line'). Zwraca { state, events } albo null.
  */
 function chooseLines(state) {
   if (!choosableLineCells(state).length) return null;
   const s = cloneState(state);
   const events = { placed: null, pushes: [], promoted: [] };
-  promoteLines(s, s.current, events);
-  s.phase = 'place';
-  s.current = 1 - s.current;
+  resolveLines(s, s.current, events);
+  return { state: s, events };
+}
+
+/** Pola długich rzędów, spośród których gracz w fazie 'line' wybiera trzy pionki. */
+function lineChoiceCells(state) {
+  if (state.phase !== 'line') return [];
+  const cells = new Map();
+  for (const run of longRuns(state.board, state.current)) {
+    for (const [a, b] of run) cells.set(a * SIZE + b, [a, b]);
+  }
+  return [...cells.values()];
+}
+
+/**
+ * Faza 'line': trzy sąsiednie pionki długiego rzędu, które zamienią się po wskazaniu
+ * pola (r, c) — wskazane pole jest środkiem trójki (na końcu rzędu: skrajna trójka).
+ * Zwraca listę 3 pól albo null.
+ */
+function lineTripleAt(state, r, c) {
+  if (state.phase !== 'line') return null;
+  for (const run of longRuns(state.board, state.current)) {
+    const i = run.findIndex(([a, b]) => a === r && b === c);
+    if (i < 0) continue;
+    const start = Math.min(Math.max(i - 1, 0), run.length - 3);
+    return run.slice(start, start + 3);
+  }
+  return null;
+}
+
+/**
+ * Faza 'line': zamieniają się w koty trzy pionki długiego rzędu wskazane polem (r, c).
+ * Jeśli zostaje jeszcze inny długi rząd, gracz wybiera dalej; w przeciwnym razie
+ * zamieniają się pozostałe rzędy po 3 pionki i tura przechodzi na przeciwnika.
+ * Zwraca { state, events } albo null.
+ */
+function chooseTriple(state, r, c) {
+  const triple = lineTripleAt(state, r, c);
+  if (!triple) return null;
+  const s = cloneState(state);
+  const events = { placed: null, pushes: [], promoted: [] };
+  promoteCells(s, s.current, triple, events);
+  resolveLines(s, s.current, events);
   return { state: s, events };
 }
 
@@ -251,7 +331,7 @@ function isValidState(s) {
     if (!Array.isArray(s.board) || s.board.length !== SIZE) return false;
     if (!Array.isArray(s.pools) || s.pools.length !== 2) return false;
     if (s.current !== 0 && s.current !== 1) return false;
-    if (!['place', 'choose', 'over'].includes(s.phase)) return false;
+    if (!['place', 'choose', 'line', 'over'].includes(s.phase)) return false;
     if (!Number.isInteger(s.nextId)) return false;
     const totals = [0, 0];
     const ids = new Set();
@@ -275,6 +355,7 @@ function isValidState(s) {
     if (s.phase === 'over') {
       return (s.winner === 0 || s.winner === 1) && Array.isArray(s.winLine) && s.winLine.length === 3;
     }
+    if (s.phase === 'line' && !longRuns(s.board, s.current).length) return false;
     return s.winner === null || s.winner === undefined;
   } catch {
     return false;
@@ -295,7 +376,11 @@ export {
   choosePiece,
   choosableLineCells,
   chooseLines,
+  lineChoiceCells,
+  lineTripleAt,
+  chooseTriple,
   findLines,
+  findRuns,
   poolTotal,
   isValidState,
 };

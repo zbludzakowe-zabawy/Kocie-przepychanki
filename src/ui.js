@@ -132,6 +132,8 @@ export function initGame() {
     const p = state.current;
     if (state.phase === 'over') {
       statusEl.innerHTML = `${dot(state.winner)}Wygrywa gracz ${NAMES[state.winner]}! Trzy koty w rzędzie! 🎉`;
+    } else if (state.phase === 'line') {
+      statusEl.innerHTML = `${dot(p)}Gracz ${NAMES[p]} ma więcej niż 3 pionki w rzędzie — wskaż środek trójki, która zmieni się w koty.`;
     } else if (state.phase === 'choose' && L.choosableLineCells(state).length) {
       statusEl.innerHTML = `${dot(p)}Gracz ${NAMES[p]} ma wszystkie pionki na planszy i pionki w rzędzie — wskaż jeden pionek albo zamień pionki z rzędu.`;
     } else if (state.phase === 'choose') {
@@ -150,6 +152,12 @@ export function initGame() {
     if (state.phase === 'choose') {
       for (const [r, c] of L.choosableCells(state)) cellAt(r, c).classList.add('choosable');
       for (const [r, c] of L.choosableLineCells(state)) cellAt(r, c).classList.add('in-line');
+      return;
+    }
+    if (state.phase === 'line') {
+      for (const [r, c] of L.lineChoiceCells(state)) cellAt(r, c).classList.add('in-line');
+      const triple = hoverCell && L.lineTripleAt(state, hoverCell[0], hoverCell[1]);
+      for (const [r, c] of triple || []) cellAt(r, c).classList.add('choosable');
       return;
     }
     if (state.phase !== 'place' || !hoverCell) return;
@@ -240,6 +248,8 @@ export function initGame() {
       apply(L.placePiece(state, r, c, selected[state.current]));
     } else if (state.phase === 'choose') {
       apply(L.choosePiece(state, r, c));
+    } else if (state.phase === 'line') {
+      apply(L.chooseTriple(state, r, c));
     }
   }
 

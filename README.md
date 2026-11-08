@@ -37,8 +37,9 @@ npm run preview      # podgląd zbudowanej wersji na porcie 4173
 6. Pionek wypchnięty poza planszę wraca do zasobnika swojego właściciela.
 7. **Trzy pionki jednego gracza w rzędzie** (poziomo, pionowo lub po skosie, myszy i koty
    w dowolnej kombinacji) zamieniają się w koty: schodzą z planszy, a do zasobnika
-   trafiają koty, które można potem postawić. Jeśli rząd jest dłuższy niż 3, zamieniają się
-   wszystkie jego pionki. Zamiana następuje **tylko po ruchu gracza, do którego należą
+   trafiają koty, które można potem postawić. Jeśli rząd jest dłuższy niż 3, gracz **wybiera
+   tylko 3 sąsiednie pionki** z tego rzędu (wskazuje środek trójki) i tylko one się zamieniają;
+   pozostałe zostają na planszy. Zamiana następuje **tylko po ruchu gracza, do którego należą
    pionki w rzędzie**. Jeśli rząd powstał w wyniku ruchu przeciwnika (przez przepchnięcie),
    pionki się nie zamieniają i zostają na planszy; zamienią się po najbliższym ruchu
    właściciela, jeśli rząd nadal będzie stał.
