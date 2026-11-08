@@ -251,13 +251,99 @@ test('8 pionków na planszy i rząd — gracz wybiera jeden pionek albo rząd', 
   assert.equal(b.state.current, 1);
 });
 
+test('rząd 4 pionków — gracz wybiera tylko 3 z nich, czwarty zostaje', () => {
+  const s = L.createGame();
+  s.pools[0] = { mouse: 5, cat: 0 };
+  s.board[2][0] = { id: s.nextId++, owner: 0, type: L.MOUSE };
+  s.board[2][1] = { id: s.nextId++, owner: 0, type: L.CAT };
+  s.board[2][3] = { id: s.nextId++, owner: 0, type: L.CAT };
+  const { state, events } = L.placePiece(s, 2, 2, L.MOUSE); // mysz nie rusza kotów
+  assert.equal(L.findRuns(state.board, 0)[0].length, 4);
+  assert.equal(events.promoted.length, 0); // nic nie zamienia się samo
+  assert.equal(state.phase, 'line');
+  assert.equal(state.current, 0);
+  assert.equal(L.lineChoiceCells(state).length, 4);
+  assert.equal(L.placePiece(state, 5, 5, L.MOUSE), null); // najpierw wybór
+
+  // pola poza rzędem nie działają
+  assert.equal(L.chooseTriple(state, 5, 5), null);
+  // wskazanie skraju lub drugiego pola daje skrajną trójkę
+  assert.deepEqual(L.lineTripleAt(state, 2, 0), [[2, 0], [2, 1], [2, 2]]);
+  assert.deepEqual(L.lineTripleAt(state, 2, 1), [[2, 0], [2, 1], [2, 2]]);
+  assert.deepEqual(L.lineTripleAt(state, 2, 2), [[2, 1], [2, 2], [2, 3]]);
+  assert.deepEqual(L.lineTripleAt(state, 2, 3), [[2, 1], [2, 2], [2, 3]]);
+
+  const r = L.chooseTriple(state, 2, 3);
+  assert.equal(r.events.promoted.length, 3);
+  assert.equal(r.state.board[2][0].owner, 0); // pierwszy pionek zostaje
+  assert.equal(r.state.board[2][1], null);
+  assert.equal(r.state.board[2][3], null);
+  assert.deepEqual(r.state.pools[0], { mouse: 4, cat: 3 });
+  assert.equal(r.state.phase, 'place');
+  assert.equal(r.state.current, 1);
+  assert.equal(count(r.state, 0), 8);
+  assert.equal(L.isValidState(JSON.parse(JSON.stringify(state))), true);
+});
+
+test('rząd 5 pionków — każdą trójkę da się wybrać', () => {
+  const s = L.createGame();
+  for (const r of [0, 1, 3, 4]) s.board[r][5] = { id: s.nextId++, owner: 1, type: L.CAT };
+  s.pools[1] = { mouse: 4, cat: 0 };
+  s.current = 1;
+  const { state } = L.placePiece(s, 2, 5, L.MOUSE);
+  assert.equal(state.phase, 'line');
+  const triples = new Set();
+  for (const [r, c] of L.lineChoiceCells(state)) {
+    triples.add(JSON.stringify(L.lineTripleAt(state, r, c)));
+  }
+  assert.equal(triples.size, 3);
+  const res = L.chooseTriple(state, 2, 5); // środek: (1..3)
+  assert.equal(res.state.board[0][5].owner, 1);
+  assert.equal(res.state.board[4][5].owner, 1);
+  assert.equal(res.state.board[2][5], null);
+  assert.equal(res.state.current, 0);
+});
+
+test('rząd dokładnie 3 pionków zamienia się sam, bez wyboru', () => {
+  const s = L.createGame();
+  put(s, 0, 0, 0, L.MOUSE);
+  put(s, 0, 1, 0, L.MOUSE);
+  // mysz na (0,2) pcha (0,1) w lewo, ale (0,0) jest zajęte, więc stoi
+  const { state, events } = L.placePiece(s, 0, 2, L.MOUSE);
+  assert.equal(state.phase, 'place');
+  assert.equal(events.promoted.length, 3);
+});
+
+test('8 pionków na planszy i rząd 4 — po wyborze rzędu gracz wskazuje trójkę', () => {
+  const s = L.createGame();
+  for (const [r, c] of [[0, 0], [0, 1], [0, 3], [2, 0], [2, 4], [4, 0], [4, 4]]) {
+    s.board[r][c] = { id: s.nextId++, owner: 0, type: L.CAT };
+  }
+  s.pools[0] = { mouse: 1, cat: 0 };
+  const { state } = L.placePiece(s, 0, 2, L.MOUSE);
+  assert.equal(state.phase, 'choose');
+  assert.equal(L.choosableLineCells(state).length, 4);
+  const a = L.chooseLines(state);
+  assert.equal(a.events.promoted.length, 0);
+  assert.equal(a.state.phase, 'line');
+  const b = L.chooseTriple(a.state, 0, 1);
+  assert.equal(b.events.promoted.length, 3);
+  assert.equal(b.state.board[0][3].owner, 0);
+  assert.deepEqual(b.state.pools[0], { mouse: 0, cat: 3 });
+  assert.equal(b.state.current, 1);
+});
+
 test('liczba pionków każdego gracza zawsze wynosi 8 (losowe partie)', () => {
   let seed = 12345;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let g = 0; g < 200; g++) {
     let s = L.createGame();
     for (let move = 0; move < 300 && s.phase !== 'over'; move++) {
-      if (s.phase === 'choose' && L.choosableLineCells(s).length && rand() < 0.5) {
+      if (s.phase === 'line') {
+        const cells = L.lineChoiceCells(s);
+        const [r, c] = cells[Math.floor(rand() * cells.length)];
+        s = L.chooseTriple(s, r, c).state;
+      } else if (s.phase === 'choose' && L.choosableLineCells(s).length && rand() < 0.5) {
         s = L.chooseLines(s).state;
       } else if (s.phase === 'choose') {
         const cells = L.choosableCells(s);

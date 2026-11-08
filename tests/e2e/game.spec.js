@@ -114,3 +114,30 @@ test('8 pionków na planszy i rząd — wybór: rząd albo jeden pionek', async 
   await expect(page.locator('.piece')).toHaveCount(7);
   await expect(linesBtn).toBeHidden();
 });
+
+test('rząd 4 pionków — gracz wskazuje trójkę, czwarty pionek zostaje', async ({ page }) => {
+  // pomarańczowy: mysz (1,0) i koty (1,1), (1,3); mysz na (1,2) domknie rząd 4 (kotów nie rusza)
+  const board = Array.from({ length: 6 }, () => Array(6).fill(null));
+  board[1][0] = { id: 1, owner: 0, type: 'mouse' };
+  board[1][1] = { id: 2, owner: 0, type: 'cat' };
+  board[1][3] = { id: 3, owner: 0, type: 'cat' };
+  const state = {
+    board, pools: [{ mouse: 5, cat: 0 }, { mouse: 8, cat: 0 }],
+    current: 0, phase: 'place', winner: null, winLine: null, nextId: 4,
+  };
+  await page.evaluate((s) => {
+    localStorage.setItem('kocie-przepychanki:game', JSON.stringify({ state: s, history: [] }));
+  }, state);
+  await page.reload();
+
+  await cell(page, 1, 2).click();
+  await expect(page.locator('#status')).toContainText('więcej niż 3 pionki w rzędzie');
+  await expect(page.locator('.cell.in-line')).toHaveCount(4);
+  await expect(page.locator('.piece')).toHaveCount(4);
+
+  await cell(page, 1, 1).click(); // trójka (1,0)–(1,2)
+  await expect(page.locator('#player-0 [data-count="cat"]')).toHaveText('3');
+  await expect(page.locator('.piece')).toHaveCount(1);
+  await expect(pieceAt(page, 1, 3)).toHaveClass(/p0/);
+  await expect(page.locator('#status')).toContainText('gracz szary');
+});
