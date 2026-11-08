@@ -140,17 +140,17 @@ function placePiece(state, r, c, type) {
     events.pushes.push({ id: moving.id, from: p.from, to: p.to, off: p.off });
   }
 
-  // 3. Wygrana: trzy koty w rzędzie (pierwszeństwo ma gracz wykonujący ruch).
-  for (const owner of [player, 1 - player]) {
-    const catLine = findLines(s.board, owner).find((cells) =>
-      cells.every(([a, b]) => s.board[a][b].type === CAT)
-    );
-    if (catLine) {
-      s.phase = 'over';
-      s.winner = owner;
-      s.winLine = catLine;
-      return { state: s, events };
-    }
+  // 3. Wygrana: trzy koty w rzędzie — tylko po ruchu ich właściciela.
+  //    Koty przeciwnika ustawione w rząd przez przepchnięcie zostają na planszy;
+  //    przeciwnik wygra po swoim najbliższym ruchu, jeśli rząd nadal będzie stał.
+  const catLine = findLines(s.board, player).find((cells) =>
+    cells.every(([a, b]) => s.board[a][b].type === CAT)
+  );
+  if (catLine) {
+    s.phase = 'over';
+    s.winner = player;
+    s.winLine = catLine;
+    return { state: s, events };
   }
 
   // 4. Wszystkie 8 pionków na planszy — gracz wybiera mysz, która zostanie kotem.
