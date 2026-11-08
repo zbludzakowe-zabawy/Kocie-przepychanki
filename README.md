@@ -46,8 +46,10 @@ npm run preview      # podgląd zbudowanej wersji na porcie 4173
    która zamienia się w kota (schodzi z planszy, a kot trafia do zasobnika). Jeśli w tym
    samym momencie ma też **trzy pionki w rzędzie**, wybiera: zamienia się jeden wskazany
    przez niego pionek albo pionki z rzędu.
-9. **Wygrywa** ten, kto ustawi w rzędzie **trzy swoje koty**. Jeśli po ruchu obaj gracze mają
-   trzy koty w rzędzie, wygrywa gracz, który wykonał ruch.
+9. **Wygrywa** ten, kto ustawi w rzędzie **trzy swoje koty**. Wygrana liczy się **tylko po ruchu
+   gracza, do którego należą koty**. Jeśli trzy koty ustawią się w rzędzie w wyniku ruchu
+   przeciwnika (przez przepchnięcie), gra toczy się dalej: właściciel kotów wygrywa po swoim
+   najbliższym ruchu, jeśli rząd nadal będzie stał.
 
 W grze można cofać ruchy (przycisk „Cofnij”). Po najechaniu na pole widać, które pionki
 zostaną przepchnięte (żółta obwódka) i które spadną z planszy (czerwona obwódka).

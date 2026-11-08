@@ -172,6 +172,29 @@ test('trzy koty w rzędzie — wygrana', () => {
   assert.equal(r.state.winLine.length, 3);
 });
 
+test('trzy koty przeciwnika ustawione przepchnięciem — wygrana dopiero po jego ruchu', () => {
+  const s = L.createGame();
+  s.pools[0] = { mouse: 7, cat: 1 };
+  s.pools[1] = { mouse: 5, cat: 0 };
+  s.board[0][0] = { id: 90, owner: 1, type: L.CAT };
+  s.board[0][1] = { id: 91, owner: 1, type: L.CAT };
+  s.board[1][2] = { id: 92, owner: 1, type: L.CAT };
+  s.nextId = 100;
+  // pomarańczowy kot na (2,2) wypycha szarego kota z (1,2) na (0,2) — rząd szarych kotów
+  const r = L.placePiece(s, 2, 2, L.CAT);
+  assert.equal(r.state.board[0][2].id, 92);
+  assert.equal(r.state.phase, 'place'); // brak wygranej po ruchu przeciwnika
+  assert.equal(r.state.winner, null);
+  assert.equal(r.state.current, 1);
+  assert.equal(L.findLines(r.state.board, 1).length, 1); // rząd zostaje na planszy
+
+  // szary wykonuje dowolny ruch — rząd nadal stoi, więc wygrywa
+  const r2 = L.placePiece(r.state, 5, 5, L.MOUSE);
+  assert.equal(r2.state.phase, 'over');
+  assert.equal(r2.state.winner, 1);
+  assert.deepEqual(r2.state.winLine, [[0, 0], [0, 1], [0, 2]]);
+});
+
 test('8 pionków na planszy — gracz wybiera mysz, która staje się kotem', () => {
   const s = L.createGame();
   // pomarańczowy ma 7 myszy rozstawionych bez trójek, 1 w zasobniku
