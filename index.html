@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#3a78c9">
   <title>Kocie przepychanki</title>
-  <meta name="description" content="Gra dla dwóch osób: myszy i koty przepychają się na pikowanej planszy 6×6.">
+  <meta name="description" content="Gra dla dwóch osób albo z komputerem: myszy i koty przepychają się na pikowanej planszy 6×6.">
   <meta name="application-name" content="Kocie przepychanki">
   <meta name="apple-mobile-web-app-title" content="Kocie przepychanki">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -67,7 +67,7 @@
 
   <main class="layout">
     <section class="player" id="player-0" data-player="0">
-      <h2>Gracz pomarańczowy</h2>
+      <h2>Gracz pomarańczowy <span class="who"></span></h2>
       <div class="pool">
         <button class="pool-btn" data-type="mouse" type="button">
           <svg><use href="#icon-mouse"/></svg>
@@ -87,7 +87,7 @@
     </div>
 
     <section class="player" id="player-1" data-player="1">
-      <h2>Gracz szary</h2>
+      <h2>Gracz szary <span class="who"></span></h2>
       <div class="pool">
         <button class="pool-btn" data-type="mouse" type="button">
           <svg><use href="#icon-mouse"/></svg>
@@ -103,10 +103,45 @@
     </section>
   </main>
 
+  <dialog id="menu" aria-labelledby="menu-title">
+    <form method="dialog" class="menu">
+      <h2 id="menu-title">Menu gry</h2>
+      <fieldset>
+        <legend>Liczba graczy</legend>
+        <div class="seg">
+          <label><input type="radio" name="players" value="1"> 1 gracz (z komputerem)</label>
+          <label><input type="radio" name="players" value="2" checked> 2 graczy</label>
+        </div>
+      </fieldset>
+      <fieldset class="only-solo">
+        <legend>Twój kolor</legend>
+        <div class="seg">
+          <label><input type="radio" name="human" value="0" checked> <span class="dot" style="background:var(--orange)"></span>Pomarańczowy (zaczyna)</label>
+          <label><input type="radio" name="human" value="1"> <span class="dot" style="background:var(--gray)"></span>Szary</label>
+        </div>
+      </fieldset>
+      <fieldset class="only-solo">
+        <legend>Poziom komputera</legend>
+        <div class="seg levels">
+          <label><input type="radio" name="level" value="1"> Bardzo łatwy</label>
+          <label><input type="radio" name="level" value="2"> Łatwy</label>
+          <label><input type="radio" name="level" value="3" checked> Średni</label>
+          <label><input type="radio" name="level" value="4"> Trudny</label>
+          <label><input type="radio" name="level" value="5"> Bardzo trudny</label>
+        </div>
+      </fieldset>
+      <p class="menu-note" id="menu-note" hidden>Rozpoczęcie nowej gry zakończy bieżącą partię.</p>
+      <div class="menu-actions">
+        <button type="submit" value="cancel" id="btn-menu-cancel">Anuluj</button>
+        <button type="submit" value="start" id="btn-start" class="primary">Zagraj</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="rules">
     <h2>Zasady</h2>
     <ul>
-      <li>Gra dla dwóch osób na planszy 6×6. Każdy gracz zaczyna z 8 myszami w zasobniku. Zaczyna gracz pomarańczowy.</li>
+      <li>Gra dla dwóch osób na planszy 6×6 (w menu „Nowa gra” można też wybrać grę z komputerem). Każdy gracz zaczyna z 8 myszami w zasobniku. Zaczyna gracz pomarańczowy.</li>
       <li>Gracze na zmianę stawiają jeden pionek ze swojego zasobnika na dowolne wolne pole.</li>
       <li><b>Mysz</b> odpycha o jedno pole wszystkie sąsiednie myszy (8 pól dookoła). Kotów nie rusza.</li>
       <li><b>Kot</b> odpycha o jedno pole wszystkie sąsiednie pionki — koty i myszy.</li>

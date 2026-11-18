@@ -284,3 +284,38 @@ body:has(.app-banner:not([hidden])) { padding-bottom: calc(130px + env(safe-area
   :root { --anim: 1ms; }
 }
 [hidden] { display: none !important; }
+
+/* ---------- Menu gry ---------- */
+.player h2 .who { display: block; font-size: 0.8em; font-weight: normal; color: var(--muted); }
+.player h2 .who:empty { display: none; }
+.board[data-busy] .cell { cursor: progress; }
+
+.menu h2 { margin: 0 0 12px; }
+.menu fieldset { border: none; margin: 0 0 14px; padding: 0; min-width: 0; }
+.menu legend { font-weight: bold; margin-bottom: 6px; padding: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+.seg label:has(input:checked) { border-color: var(--ink); background: #fff7d6; outline: 3px solid #ffd54a; }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--quilt); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg .dot {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+.menu-note { color: var(--muted); margin: 0 0 12px; }
+.menu-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.menu-actions .primary { background: var(--quilt); color: #fff; }
+dialog form.menu { text-align: left; }

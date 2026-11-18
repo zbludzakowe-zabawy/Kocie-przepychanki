@@ -1,6 +1,7 @@
 /* Kocie przepychanki — interfejs w przeglądarce. */
 import * as L from './logic.js';
 import { loadPref, savePref } from './storage.js';
+import { chooseAction, applyAction, LEVELS } from './ai.js';
 
 export function initGame() {
   const SIZE = L.SIZE;
@@ -14,7 +15,16 @@ export function initGame() {
   const panels = [document.getElementById('player-0'), document.getElementById('player-1')];
 
   const SAVE_KEY = 'game';
+  const SETTINGS_KEY = 'settings';
   const MAX_HISTORY = 200;
+  // players: 1 (z komputerem) albo 2; human: kolor gracza-człowieka (0 = pomarańczowy, zaczyna);
+  // level: poziom komputera 1–5.
+  const DEFAULT_SETTINGS = { players: 2, human: 0, level: 3 };
+  const validSettings = (x) =>
+    !!x && (x.players === 1 || x.players === 2) && (x.human === 0 || x.human === 1) &&
+    LEVELS.some((l) => l.id === x.level);
+  let settings = loadPref(SETTINGS_KEY, null);
+  if (!validSettings(settings)) settings = { ...DEFAULT_SETTINGS };
   let state = L.createGame();
   let history = [];
   // Partia zapisuje się w przeglądarce i wraca po odświeżeniu / ponownym otwarciu aplikacji.
@@ -22,11 +32,21 @@ export function initGame() {
   if (saved && L.isValidState(saved.state)) {
     state = saved.state;
     history = Array.isArray(saved.history) ? saved.history.filter(L.isValidState).slice(-MAX_HISTORY) : [];
+    // ustawienia trwającej partii (gra z komputerem wraca po odświeżeniu)
+    if (validSettings(saved.settings)) settings = { ...saved.settings };
   }
-  const save = () => savePref(SAVE_KEY, { state, history: history.slice(-MAX_HISTORY) });
+  const save = () => savePref(SAVE_KEY, { state, history: history.slice(-MAX_HISTORY), settings });
   let selected = [L.MOUSE, L.MOUSE];
   let animating = false;
   let hoverCell = null;
+  let aiTimer = null; // zaplanowany ruch komputera
+  let aiGen = 0; // licznik unieważniający zaplanowany ruch (cofnięcie, nowa gra)
+
+  const solo = () => settings.players === 1;
+  const aiPlayer = () => 1 - settings.human;
+  const isAi = (i) => solo() && i === aiPlayer();
+  const isAiTurn = () => state.phase !== 'over' && isAi(state.current);
+  const levelName = () => LEVELS.find((l) => l.id === settings.level).name;
 
   const ANIM = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 10 : 280;
   const wait = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -121,15 +141,20 @@ export function initGame() {
       for (const btn of panel.querySelectorAll('.pool-btn')) {
         const type = btn.dataset.type;
         btn.querySelector('.count').textContent = state.pools[i][type];
-        btn.disabled = state.pools[i][type] === 0 || state.current !== i || state.phase !== 'place';
+        btn.disabled = state.pools[i][type] === 0 || state.current !== i || state.phase !== 'place' || isAi(i);
         btn.classList.toggle('selected', selected[i] === type && state.phase === 'place' && state.current === i);
       }
+      panel.querySelector('.who').textContent = !solo() ? '' : isAi(i) ? `(komputer, ${levelName()})` : '(Ty)';
     });
   }
 
   function renderStatus() {
     const dot = (i) => `<span class="dot" style="background:${COLORS[i]}"></span>`;
     const p = state.current;
+    if (solo()) {
+      statusEl.innerHTML = dot(state.phase === 'over' ? state.winner : p) + soloStatus();
+      return;
+    }
     if (state.phase === 'over') {
       statusEl.innerHTML = `${dot(state.winner)}Wygrywa gracz ${NAMES[state.winner]}! Trzy koty w rzędzie! 🎉`;
     } else if (state.phase === 'line') {
@@ -144,11 +169,28 @@ export function initGame() {
     }
   }
 
+  /** Komunikat w grze z komputerem (zamiast „gracz pomarańczowy / szary”). */
+  function soloStatus() {
+    if (state.phase === 'over') {
+      return isAi(state.winner)
+        ? 'Wygrywa komputer — trzy koty w rzędzie. Spróbuj jeszcze raz!'
+        : 'Wygrywasz! Trzy koty w rzędzie! 🎉';
+    }
+    if (isAiTurn()) return `Komputer (${NAMES[state.current]}) myśli…`;
+    if (state.phase === 'line') return 'Masz więcej niż 3 pionki w rzędzie — wskaż środek trójki, która zmieni się w koty.';
+    if (state.phase === 'choose' && L.choosableLineCells(state).length) {
+      return 'Masz wszystkie pionki na planszy i pionki w rzędzie — wskaż jeden pionek albo zamień pionki z rzędu.';
+    }
+    if (state.phase === 'choose') return 'Masz wszystkie pionki na planszy — wybierz mysz, która zmieni się w kota.';
+    const what = selected[state.current] === L.CAT ? 'kota' : 'mysz';
+    return `Twój ruch (${NAMES[state.current]}) — postaw ${what} na wolnym polu.`;
+  }
+
   function updateHints() {
     for (const cell of cells) {
       cell.classList.remove('hover-ok', 'hover-bad', 'will-push', 'will-fall', 'choosable', 'in-line');
     }
-    if (animating) return;
+    if (animating || isAiTurn()) return;
     if (state.phase === 'choose') {
       for (const [r, c] of L.choosableCells(state)) cellAt(r, c).classList.add('choosable');
       for (const [r, c] of L.choosableLineCells(state)) cellAt(r, c).classList.add('in-line');
@@ -180,19 +222,57 @@ export function initGame() {
     renderPanels();
     renderStatus();
     updateHints();
-    undoBtn.disabled = history.length === 0 || animating;
+    undoBtn.disabled = !canUndo() || animating;
     renderLinesBtn();
+    scheduleAi();
   }
 
   function renderLinesBtn() {
-    linesBtn.hidden = animating || L.choosableLineCells(state).length === 0;
+    linesBtn.hidden = animating || isAiTurn() || L.choosableLineCells(state).length === 0;
+  }
+
+  /** W grze z komputerem cofamy się do ostatniej decyzji człowieka (razem z ruchem komputera). */
+  function canUndo() {
+    if (!solo()) return history.length > 0;
+    return history.some((s) => s.current === settings.human);
   }
 
   // ---------- animacja ruchu ----------
   function setBusy(v) {
     animating = v;
-    if (v) boardEl.dataset.busy = '1';
+    updateBusy();
+  }
+
+  // plansza jest „zajęta” w trakcie animacji i gdy komputer ma zaplanowany ruch
+  function updateBusy() {
+    if (animating || aiTimer) boardEl.dataset.busy = '1';
     else delete boardEl.dataset.busy;
+  }
+
+  // ---------- ruch komputera ----------
+  function scheduleAi() {
+    if (!isAiTurn() || animating || aiTimer) return;
+    const gen = ++aiGen;
+    // krótka pauza, żeby było widać, co się dzieje (dalsze decyzje w tej samej turze szybciej)
+    const delay = state.phase === 'place' ? 450 : 300;
+    aiTimer = setTimeout(() => {
+      if (gen !== aiGen) return;
+      const action = chooseAction(state, settings.level);
+      aiTimer = null;
+      if (gen !== aiGen || !action) {
+        updateBusy();
+        return;
+      }
+      apply(applyAction(state, action));
+    }, delay);
+    updateBusy();
+  }
+
+  function cancelAi() {
+    aiGen++;
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    updateBusy();
   }
 
   async function animate(events) {
@@ -243,7 +323,7 @@ export function initGame() {
 
   // ---------- obsługa zdarzeń ----------
   function onCellClick(r, c) {
-    if (animating) return;
+    if (animating || isAiTurn()) return;
     if (state.phase === 'place') {
       apply(L.placePiece(state, r, c, selected[state.current]));
     } else if (state.phase === 'choose') {
@@ -256,7 +336,7 @@ export function initGame() {
   panels.forEach((panel, i) => {
     for (const btn of panel.querySelectorAll('.pool-btn')) {
       btn.addEventListener('click', () => {
-        if (state.current !== i || state.phase !== 'place') return;
+        if (state.current !== i || state.phase !== 'place' || isAi(i)) return;
         selected[i] = btn.dataset.type;
         renderPanels();
         renderStatus();
@@ -266,40 +346,63 @@ export function initGame() {
   });
 
   linesBtn.addEventListener('click', () => {
-    if (animating) return;
+    if (animating || isAiTurn()) return;
     apply(L.chooseLines(state));
   });
 
   undoBtn.addEventListener('click', () => {
-    if (animating || !history.length) return;
+    if (animating || !canUndo()) return;
+    cancelAi();
     state = history.pop();
+    // z komputerem: cofamy też jego ruchy, aż znów będzie kolej człowieka
+    while (solo() && state.current !== settings.human && history.length) state = history.pop();
     for (const el of pieceEls.values()) el.remove();
     pieceEls.clear();
     render();
   });
 
+  // ---------- menu gry ----------
+  const menu = document.getElementById('menu');
+  const menuForm = menu.querySelector('form');
+  const radio = (name) => menuForm.querySelector(`input[name="${name}"]:checked`);
+  function syncMenu() {
+    const one = radio('players').value === '1';
+    for (const el of menuForm.querySelectorAll('.only-solo')) el.hidden = !one;
+  }
+  menuForm.addEventListener('change', syncMenu);
+
   document.getElementById('btn-new').addEventListener('click', () => {
     if (animating) return;
-    // Potwierdzenie w samej stronie (okienka confirm() nie działają w każdym widoku).
-    const btn = document.getElementById('btn-new');
-    if (history.length && state.phase !== 'over' && !btn.dataset.armed) {
-      btn.dataset.armed = '1';
-      btn.textContent = 'Na pewno? Kliknij ponownie';
-      setTimeout(() => {
-        delete btn.dataset.armed;
-        btn.textContent = 'Nowa gra';
-      }, 3000);
-      return;
+    for (const [name, value] of Object.entries(settings)) {
+      const input = menuForm.querySelector(`input[name="${name}"][value="${value}"]`);
+      if (input) input.checked = true;
     }
-    delete btn.dataset.armed;
-    btn.textContent = 'Nowa gra';
+    syncMenu();
+    document.getElementById('menu-note').hidden = !(history.length && state.phase !== 'over');
+    menu.returnValue = '';
+    menu.showModal();
+  });
+
+  menu.addEventListener('close', () => {
+    if (menu.returnValue !== 'start') return;
+    settings = {
+      players: Number(radio('players').value),
+      human: Number(radio('human').value),
+      level: Number(radio('level').value),
+    };
+    savePref(SETTINGS_KEY, settings);
+    newGame();
+  });
+
+  function newGame() {
+    cancelAi();
     state = L.createGame();
     history = [];
     selected = [L.MOUSE, L.MOUSE];
     for (const el of pieceEls.values()) el.remove();
     pieceEls.clear();
     render();
-  });
+  }
 
   const rules = document.getElementById('rules');
   document.getElementById('btn-rules').addEventListener('click', () => rules.showModal());
