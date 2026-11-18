@@ -84,12 +84,17 @@ test('gra z komputerem: człowiek gra szarymi, komputer (pomarańczowy) zaczyna'
   await page.locator('.cell').nth(idx).click();
   await expect(page.locator('#board:not([data-busy])')).toBeVisible();
   await expect(page.locator('#status')).toContainText('Twój ruch');
-  await expect(page.locator('#player-1 [data-count="mouse"]')).toHaveText('7');
+  // ruch komputera, ruch człowieka i odpowiedź komputera (licznik myszy nie wystarczy —
+  // komputer mógł wypchnąć mysz człowieka z planszy z powrotem do zasobnika)
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('kocie-przepychanki:game')));
+  expect((await saved()).history).toHaveLength(3);
+  await expect(page.locator('#btn-undo')).toBeEnabled();
 
   // cofnięcie wraca do ruchu człowieka (cofa też odpowiedź komputera)
   await page.locator('#btn-undo').click();
   await expect(page.locator('#player-1 [data-count="mouse"]')).toHaveText('8');
   await expect(page.locator('#status')).toContainText('Twój ruch');
+  expect((await saved()).history).toHaveLength(1);
 
   // ustawienia wracają po odświeżeniu
   await page.reload();
@@ -217,4 +222,26 @@ test('rząd 4 pionków — gracz wskazuje trójkę, czwarty pionek zostaje', asy
   await expect(page.locator('.piece')).toHaveCount(1);
   await expect(pieceAt(page, 1, 3)).toHaveClass(/p0/);
   await expect(page.locator('#status')).toContainText('gracz szary');
+});
+
+test('ikona udostępniania: systemowe okno ze stałym adresem, a bez niego — schowek', async ({ page, context }) => {
+  const btn = page.locator('.share-btn');
+  await expect(btn).toBeVisible();
+  await expect(btn).toHaveAttribute('aria-label', 'Udostępnij Kocie przepychanki');
+  const box = await btn.boundingBox();
+  expect(box.width).toBeLessThanOrEqual(32);
+
+  await page.evaluate(() => {
+    navigator.share = (data) => { window.__shared = data; return Promise.resolve(); };
+  });
+  await btn.click();
+  const shared = await page.evaluate(() => window.__shared);
+  expect(shared.url).toBe('https://zbludzakowe-zabawy.github.io/Kocie-przepychanki/');
+
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => { delete navigator.share; Navigator.prototype.share = undefined; });
+  await btn.click();
+  await expect(page.locator('#toast')).toContainText('Skopiowano link');
+  expect(await page.evaluate(() => navigator.clipboard.readText()))
+    .toBe('https://zbludzakowe-zabawy.github.io/Kocie-przepychanki/');
 });

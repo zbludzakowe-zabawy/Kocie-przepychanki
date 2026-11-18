@@ -12,7 +12,9 @@ Działa w przeglądarce i na telefonie (PWA, także offline), budowana do jedneg
 - **Android / Chrome / Edge:** na dole pojawia się baner „Zainstaluj” (albo menu przeglądarki → „Zainstaluj aplikację”).
 - **iPhone / iPad (Safari):** Udostępnij → „Do ekranu początkowego”.
 
-Zainstalowana gra działa bez internetu. Gdy pojawi się nowa wersja, gra pokazuje komunikat
+Zainstalowana gra działa bez internetu. Żeby wysłać grę znajomym, stuknij małą ikonę
+udostępniania (trzy połączone kropki) w prawym dolnym rogu — na telefonie otworzy się okno
+udostępniania, na komputerze link skopiuje się do schowka. Gdy pojawi się nowa wersja, gra pokazuje komunikat
 „Dostępna nowa wersja” z przyciskiem „Odśwież”. Bieżąca partia zapisuje się w przeglądarce
 i wraca po odświeżeniu lub ponownym otwarciu.
 
@@ -91,6 +93,7 @@ src/
   ai.js              komputer: 5 poziomów (minimax z cięciami alfa-beta), bez DOM
   ui.js              plansza, animacje, cofanie, autozapis partii, menu gry, ruchy komputera
   pwa.js             instalacja i komunikat „Dostępna nowa wersja”
+  share.js           ikona „Udostępnij” (okno systemowe albo kopiowanie linku)
   storage.js         zapis w przeglądarce (localStorage)
   sw-template.js     service worker (działanie offline), wersja nadawana przy buildzie
   style.css          wygląd
