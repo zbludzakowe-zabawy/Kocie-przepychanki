@@ -1,6 +1,6 @@
 # Kocie przepychanki
 
-Gra dla dwóch osób w przeglądarce. Plansza 6×6 wygląda jak niebieska, pikowana kołderka.
+Gra dla dwóch osób (albo jednej osoby z komputerem) w przeglądarce. Plansza 6×6 wygląda jak niebieska, pikowana kołderka.
 Gracz pomarańczowy i gracz szary na zmianę stawiają myszy i koty, które się przepychają.
 
 Działa w przeglądarce i na telefonie (PWA, także offline), budowana do jednego pliku
@@ -12,7 +12,9 @@ Działa w przeglądarce i na telefonie (PWA, także offline), budowana do jedneg
 - **Android / Chrome / Edge:** na dole pojawia się baner „Zainstaluj” (albo menu przeglądarki → „Zainstaluj aplikację”).
 - **iPhone / iPad (Safari):** Udostępnij → „Do ekranu początkowego”.
 
-Zainstalowana gra działa bez internetu. Gdy pojawi się nowa wersja, gra pokazuje komunikat
+Zainstalowana gra działa bez internetu. Żeby wysłać grę znajomym, stuknij małą ikonę
+udostępniania (trzy połączone kropki) w prawym dolnym rogu — na telefonie otworzy się okno
+udostępniania, na komputerze link skopiuje się do schowka. Gdy pojawi się nowa wersja, gra pokazuje komunikat
 „Dostępna nowa wersja” z przyciskiem „Odśwież”. Bieżąca partia zapisuje się w przeglądarce
 i wraca po odświeżeniu lub ponownym otwarciu.
 
@@ -52,6 +54,23 @@ npm run preview      # podgląd zbudowanej wersji na porcie 4173
    przeciwnika (przez przepchnięcie), gra toczy się dalej: właściciel kotów wygrywa po swoim
    najbliższym ruchu, jeśli rząd nadal będzie stał.
 
+## Gra z komputerem
+
+Przycisk **„Nowa gra”** otwiera **Menu gry**:
+
+- **Liczba graczy:** 1 gracz (z komputerem) albo 2 graczy (gra jak dotąd, dwie osoby przy jednym ekranie).
+- **Twój kolor** (tylko przy 1 graczu): pomarańczowy (zaczyna) albo szary — wtedy pierwszy ruch
+  robi komputer.
+- **Poziom komputera** (tylko przy 1 graczu): bardzo łatwy, łatwy, średni, trudny, bardzo trudny.
+  - bardzo łatwy — losowe ruchy,
+  - łatwy — patrzy na własny ruch, ale często się myli,
+  - średni — wybiera najlepszy własny ruch (np. zawsze wykorzysta wygraną),
+  - trudny — przewiduje odpowiedź przeciwnika (broni się przed wygraną),
+  - bardzo trudny — przewiduje kilka ruchów naprzód (do ok. 2 s myślenia).
+
+Ustawienia zapisują się razem z partią. „Cofnij” w grze z komputerem cofa też jego odpowiedź,
+aż znów będzie Twój ruch.
+
 W grze można cofać ruchy (przycisk „Cofnij”). Po najechaniu na pole widać, które pionki
 zostaną przepchnięte (żółta obwódka) i które spadną z planszy (czerwona obwódka).
 
@@ -71,8 +90,10 @@ Przed pierwszym `test:e2e`: `npx playwright install chromium`.
 index.html           strona, grafiki pionków (SVG), banery instalacji i aktualizacji
 src/
   logic.js           zasady gry – czysta logika bez DOM, pokryta testami
-  ui.js              plansza, animacje, cofanie, autozapis partii
+  ai.js              komputer: 5 poziomów (minimax z cięciami alfa-beta), bez DOM
+  ui.js              plansza, animacje, cofanie, autozapis partii, menu gry, ruchy komputera
   pwa.js             instalacja i komunikat „Dostępna nowa wersja”
+  share.js           ikona „Udostępnij” (okno systemowe albo kopiowanie linku)
   storage.js         zapis w przeglądarce (localStorage)
   sw-template.js     service worker (działanie offline), wersja nadawana przy buildzie
   style.css          wygląd
