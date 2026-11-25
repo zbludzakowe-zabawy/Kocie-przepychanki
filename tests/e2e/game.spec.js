@@ -12,7 +12,8 @@ const pieceAt = (page, r, c) =>
 
 test.beforeEach(async ({ page }) => {
   await page.goto('./');
-  await page.evaluate(() => localStorage.clear());
+  // czysty stan; baner zgody na statystyki zasłania planszę, więc odpowiedź „nie” jest już zapisana
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('zz-analytics-consent', 'denied'); });
   await page.reload();
 });
 
